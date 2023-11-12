@@ -11,9 +11,8 @@ from service.log import app_logger
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 USER_DATABASE = {"admin": {"login": "admin", "password": "admin"}}
 
-print(Depends(oauth2_scheme))
 
-with open("./data/top_100_frequent.json", "r", encoding="utf-8") as f:
+with open("./top_100_frequent.json", "r", encoding="utf-8") as f:
     TOP_100 = json.load(f)
 
 
