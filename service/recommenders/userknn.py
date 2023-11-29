@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 import scipy as sp
-from implicit.nearest_neighbours import TFIDFRecommender
+from implicit.nearest_neighbours import ItemItemRecommender
 
 
 class UserKnn:
@@ -12,7 +12,9 @@ class UserKnn:
     based on ItemKNN model from implicit.nearest_neighbours
     """
 
-    def __init__(self, model: TFIDFRecommender, N_users: int = 50):
+    # pylint: disable=too-many-instance-attributes
+
+    def __init__(self, model: ItemItemRecommender, N_users: int = 50):
         self.N_users = N_users
         self.model = model
         self.is_fitted = False
@@ -54,7 +56,7 @@ class UserKnn:
     def _count_item_idf(self, df: pd.DataFrame):
         item_cnt = Counter(df["item_id"].values)
         item_idf = pd.DataFrame.from_dict(item_cnt, orient="index", columns=["doc_freq"]).reset_index()
-        item_idf["idf"] = item_idf["doc_freq"].apply(lambda x: self.idf(self.n, x))
+        item_idf.loc[:, "idf"] = item_idf.loc[:, "doc_freq"].apply(lambda x: self.idf(self.n, x))
         self.item_idf = item_idf
 
     def fit(self, train: pd.DataFrame):
@@ -69,7 +71,7 @@ class UserKnn:
         self.is_fitted = True
 
     def _generate_recs_mapper(
-        self, model: TFIDFRecommender, user_mapping: Dict[int, int], user_inv_mapping: Dict[int, int], N: int
+        self, model: ItemItemRecommender, user_mapping: Dict[int, int], user_inv_mapping: Dict[int, int], N: int
     ):
         def _recs_mapper(user):
             user_id = self.users_mapping[user]

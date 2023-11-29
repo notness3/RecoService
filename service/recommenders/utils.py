@@ -1,11 +1,12 @@
 import os
 from pickle import Unpickler
 
+from service.recommenders.userknn import UserKnn
+
 
 class CustomUnpickler(Unpickler):
     def find_class(self, module, name):
         if name == "UserKnn":
-            from service.recommenders.userknn import UserKnn
 
             return UserKnn
         return super().find_class(module, name)

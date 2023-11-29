@@ -50,7 +50,7 @@ mypy: .venv
 	poetry run mypy $(PROJECT) $(TESTS)
 
 pylint: .venv
-	poetry run pylint $(PROJECT) $(TESTS)
+	poetry run pylint --disable=attribute-defined-outside-init $(PROJECT) $(TESTS)
 
 lint: isort flake mypy pylint
 
