@@ -67,3 +67,6 @@ venv.bak/
 .mypy_cache/
 
 
+#models
+*.pickle
+
