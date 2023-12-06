@@ -1,32 +1,31 @@
 import json
+import os
+import pickle
 from typing import List
 
-import pandas as pd
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 from service.api.exceptions import ModelNotFoundError, UserNotFoundError
 from service.log import app_logger
-from service.recommenders.utils import load_model
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 USER_DATABASE = {"admin": {"login": "admin", "password": "admin"}}
 MODE = "offline"
 
-if MODE == "online":
-    PATH = "./models/user_knn.pickle"
-    tfidf_model = load_model(PATH)
-    hot_or_warm_users = tfidf_model.users_mapping.keys()
-else:
-    with open("./models/userknn_model.json", "r", encoding="utf-8") as f:
-        user_mapping = json.load(f)
-        hot_or_warm_users = user_mapping.keys()
+
+with open("./models/userknn_model.json", "r", encoding="utf-8") as f:
+    user_mapping = json.load(f)
+    hot_or_warm_users = user_mapping.keys()
 
 with open("./models/popular_model.json", "r", encoding="utf-8") as f:
     popular_mapping = json.load(f)
     recos_for_cold = popular_mapping[list(popular_mapping.keys())[0]]
 
+if os.path.exists("./models/ann_lightfm.pickle"):
+    with open("./models/ann_lightfm.pickle", "rb") as file:
+        ann_lightfm = pickle.load(file)
 
 with open("./top_100_frequent.json", "r", encoding="utf-8") as f:
     TOP_100 = json.load(f)
@@ -83,18 +82,20 @@ async def get_reco(
         reco = list(TOP_100.values())[:k_recs]
     if model_name == "tfidf":
         reco = []
-        user_df = pd.DataFrame([{"user_id": user_id}])
 
         if user_id in hot_or_warm_users:
-            if MODE == "online":
-                reco = tfidf_model.predict(user_df, k_recs)["item_id"].to_list()
-            else:
-                reco = user_mapping[user_id]
+            reco = user_mapping[user_id]
 
         pop_reco = recos_for_cold
         len_recos = k_recs - len(reco)
 
         reco += [item for item in pop_reco if item not in reco][:len_recos]
+
+    if model_name == "ann_lightfm":
+        if user_id in ann_lightfm.user_id_map.external_ids:
+            reco = ann_lightfm.get_item_list_for_user(user_id, top_n=k_recs).tolist()
+        else:
+            reco = list(TOP_100.values())[:k_recs]
 
     return RecoResponse(user_id=user_id, items=reco)
 
