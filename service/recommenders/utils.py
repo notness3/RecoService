@@ -7,7 +7,6 @@ from service.recommenders.userknn import UserKnn
 class CustomUnpickler(Unpickler):
     def find_class(self, module, name):
         if name == "UserKnn":
-
             return UserKnn
         return super().find_class(module, name)
 

@@ -14,7 +14,7 @@ class LogConfig(Config):
 class ServiceConfig(Config):
     service_name: str = "reco_service"
     k_recs: int = 10
-    available_models: list = ["top_frequent", "tfidf"]
+    available_models: list = ["top_frequent", "tfidf", "ann_als", "ann_lightfm"]
 
     log_config: LogConfig
 
