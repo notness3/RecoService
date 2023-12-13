@@ -84,6 +84,8 @@ async def get_reco(
 
     if model_name not in request.app.state.available_models:
         raise ModelNotFoundError(error_message=f"Model {model_name} not found")
+    if model_name == "top_frequent":
+        reco = list(TOP_100.values())[:k_recs]
 
     if model_name == "tfidf":
         reco = []
