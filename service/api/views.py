@@ -19,16 +19,21 @@ with open("./models/userknn_model.json", "r", encoding="utf-8") as f:
     user_mapping = json.load(f)
     hot_or_warm_users = user_mapping.keys()
 
-with open("./models/popular_model.json", "r", encoding="utf-8") as f:
-    popular_mapping = json.load(f)
-    recos_for_cold = popular_mapping[list(popular_mapping.keys())[0]]
-
 if os.path.exists("./models/ann_lightfm.pickle"):
     with open("./models/ann_lightfm.pickle", "rb") as file:
         ann_lightfm = pickle.load(file)
 
 with open("./top_100_frequent.json", "r", encoding="utf-8") as f:
     TOP_100 = json.load(f)
+
+with open("./models/autoencoder.json", "r", encoding="utf-8") as f:
+    autoencoder = json.load(f)
+
+with open("./models/dssm.json", "r", encoding="utf-8") as f:
+    dssm = json.load(f)
+
+with open("./models/recbone.json", "r", encoding="utf-8") as f:
+    recbone = json.load(f)
 
 
 class LoginData(BaseModel):
@@ -62,6 +67,7 @@ async def health(token: str = Depends(get_current_user)) -> str:
     return "I am alive"
 
 
+# flake8: noqa: C901
 @router.get(
     path="/reco/{model_name}/{user_id}",
     tags=["Recommendations"],
@@ -80,13 +86,14 @@ async def get_reco(
         raise ModelNotFoundError(error_message=f"Model {model_name} not found")
     if model_name == "top_frequent":
         reco = list(TOP_100.values())[:k_recs]
+
     if model_name == "tfidf":
         reco = []
 
         if user_id in hot_or_warm_users:
             reco = user_mapping[user_id]
 
-        pop_reco = recos_for_cold
+        pop_reco = list(TOP_100.values())[:k_recs]
         len_recos = k_recs - len(reco)
 
         reco += [item for item in pop_reco if item not in reco][:len_recos]
@@ -94,6 +101,25 @@ async def get_reco(
     if model_name == "ann_lightfm":
         if user_id in ann_lightfm.user_id_map.external_ids:
             reco = ann_lightfm.get_item_list_for_user(user_id, top_n=k_recs).tolist()
+        else:
+            reco = list(TOP_100.values())[:k_recs]
+
+    if model_name == "dssm":
+        if str(user_id) in dssm:
+            reco = dssm[str(user_id)]
+        else:
+            reco = list(TOP_100.values())[:k_recs]
+
+    if model_name == "autoencoder":
+        if str(user_id) in autoencoder:
+            print("model")
+            reco = autoencoder[str(user_id)]
+        else:
+            reco = list(TOP_100.values())[:k_recs]
+
+    if model_name == "recbone":
+        if str(user_id) in recbone:
+            reco = recbone[str(user_id)]
         else:
             reco = list(TOP_100.values())[:k_recs]
 
