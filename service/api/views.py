@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from service.api.exceptions import ModelNotFoundError, UserNotFoundError
 from service.log import app_logger
+from service.recommenders.utils import get_recos, load_json_model
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 USER_DATABASE = {"admin": {"login": "admin", "password": "admin"}}
@@ -26,14 +27,13 @@ if os.path.exists("./models/ann_lightfm.pickle"):
 with open("./top_100_frequent.json", "r", encoding="utf-8") as f:
     TOP_100 = json.load(f)
 
-with open("./models/autoencoder.json", "r", encoding="utf-8") as f:
-    autoencoder = json.load(f)
 
-with open("./models/dssm.json", "r", encoding="utf-8") as f:
-    dssm = json.load(f)
-
-with open("./models/recbone.json", "r", encoding="utf-8") as f:
-    recbone = json.load(f)
+model_dict = {
+    "autoencoder": load_json_model("./models/autoencoder.json"),
+    "dssm": load_json_model("./models/dssm.json"),
+    "recbone": load_json_model("./models/recbone.json"),
+    "als+lightgbm": load_json_model("./models/2stage.json"),
+}
 
 
 class LoginData(BaseModel):
@@ -104,24 +104,10 @@ async def get_reco(
         else:
             reco = list(TOP_100.values())[:k_recs]
 
-    if model_name == "dssm":
-        if str(user_id) in dssm:
-            reco = dssm[str(user_id)]
-        else:
-            reco = list(TOP_100.values())[:k_recs]
+    if model_name in model_dict:
+        userid = str(user_id)
+        reco = get_recos(model_dict[model_name], list(TOP_100.values()), userid)
 
-    if model_name == "autoencoder":
-        if str(user_id) in autoencoder:
-            print("model")
-            reco = autoencoder[str(user_id)]
-        else:
-            reco = list(TOP_100.values())[:k_recs]
-
-    if model_name == "recbone":
-        if str(user_id) in recbone:
-            reco = recbone[str(user_id)]
-        else:
-            reco = list(TOP_100.values())[:k_recs]
 
     return RecoResponse(user_id=user_id, items=reco)
 
